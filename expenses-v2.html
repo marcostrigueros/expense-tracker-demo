@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense Tracker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f4f5f7;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 48px 16px;
+      color: #1f2330;
+    }
+    .card {
+      background: #fff;
+      width: 100%;
+      max-width: 640px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      padding: 24px;
+    }
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    h1 { font-size: 1.4rem; margin: 0; }
+    h2 { font-size: 1rem; margin: 0 0 12px; color: #4b5563; }
+    .month-nav { display: flex; align-items: center; gap: 8px; }
+    .month-nav button {
+      border: 1px solid #d0d3d9;
+      background: #fff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .month-nav button:hover { background: #f1f3f6; }
+    .month-nav #month-label { min-width: 120px; text-align: center; font-weight: 600; }
+    .month-nav #all-time-toggle.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+    .add-form, .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .add-form input, .add-form select, .controls select {
+      padding: 10px 12px;
+      border: 1px solid #d0d3d9;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .add-form #amount-input { width: 110px; }
+    .add-form #note-input { flex: 1; min-width: 140px; }
+    .add-form button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .add-form button:hover { background: #1d4ed8; }
+    .controls select { flex: 1; }
+
+    .expense-list { list-style: none; margin: 0 0 24px; padding: 0; }
+    .expense-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 4px;
+      border-bottom: 1px solid #eef0f3;
+    }
+    .expense-list li:last-child { border-bottom: none; }
+    .expense-list .date { color: #6b7280; font-variant-numeric: tabular-nums; font-size: 0.85rem; width: 92px; }
+    .expense-list .note { flex: 1; }
+    .expense-list .chip {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .expense-list .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .expense-list .delete {
+      border: none; background: transparent; color: #9aa0a6;
+      font-size: 1.1rem; cursor: pointer; line-height: 1;
+    }
+    .expense-list .delete:hover { color: #dc2626; }
+    .expense-list .edit {
+      border: none; background: transparent; color: #9aa0a6;
+      font-size: 0.8rem; cursor: pointer; line-height: 1; padding: 2px 4px;
+    }
+    .expense-list .edit:hover { color: #2563eb; }
+    .amount-error { color: #dc2626; font-size: 0.8rem; margin-left: 4px; }
+    .edit-mode-bar {
+      display: none; align-items: center; gap: 8px; margin-bottom: 4px;
+      font-size: 0.85rem; color: #4b5563;
+    }
+    .edit-mode-bar.visible { display: flex; }
+    .edit-mode-bar button {
+      border: none; background: transparent; color: #6b7280;
+      cursor: pointer; text-decoration: underline; font-size: 0.85rem; padding: 0;
+    }
+    .edit-mode-bar button:hover { color: #1f2330; }
+    .empty { color: #9aa0a6; padding: 8px 4px; }
+
+    .summary { border-top: 1px solid #eef0f3; padding-top: 16px; margin-bottom: 24px; }
+    .summary .total { font-size: 1.8rem; font-weight: 700; margin-bottom: 16px; }
+    .category-bars { display: flex; flex-direction: column; gap: 8px; }
+    .cat-bar { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+    .cat-bar .cat-name { width: 110px; }
+    .cat-bar .bar-track { flex: 1; background: #f1f3f6; border-radius: 6px; overflow: hidden; height: 18px; }
+    .cat-bar .bar-fill { height: 100%; border-radius: 6px; }
+    .cat-bar .cat-amount { width: 80px; text-align: right; font-variant-numeric: tabular-nums; }
+
+    .trend { border-top: 1px solid #eef0f3; padding-top: 16px; }
+    .monthly-trend { display: flex; align-items: flex-end; gap: 12px; height: 160px; }
+    .trend-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; flex: 1; height: 100%; }
+    .trend-col .trend-bar { width: 100%; max-width: 48px; background: #2563eb; border-radius: 6px 6px 0 0; }
+    .trend-col .trend-amount { font-size: 0.75rem; color: #4b5563; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+    .trend-col .trend-month { font-size: 0.75rem; color: #6b7280; margin-top: 6px; }
+
+    /* View toggle */
+    .view-toggle { display: flex; gap: 4px; }
+    .view-toggle button {
+      border: 1px solid #d0d3d9; background: #fff; border-radius: 8px;
+      padding: 6px 14px; cursor: pointer; font-size: 0.9rem;
+    }
+    .view-toggle button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+    /* Groups view */
+    .groups-view { display: none; }
+    .groups-view.visible { display: block; }
+    .personal-view { display: none; }
+    .personal-view.visible { display: block; }
+
+    .group-list { list-style: none; margin: 0 0 16px; padding: 0; }
+    .group-list li {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 4px; border-bottom: 1px solid #eef0f3; cursor: pointer;
+    }
+    .group-list li:last-child { border-bottom: none; }
+    .group-list .group-name { flex: 1; font-weight: 500; }
+    .group-list .group-meta { font-size: 0.8rem; color: #6b7280; }
+
+    .group-detail-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .back-btn {
+      border: 1px solid #d0d3d9; background: #fff; border-radius: 8px;
+      padding: 4px 10px; cursor: pointer; font-size: 0.85rem;
+    }
+    .participant-list { list-style: none; margin: 0 0 12px; padding: 0; }
+    .participant-list li {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 4px; border-bottom: 1px solid #eef0f3;
+    }
+    .participant-list li:last-child { border-bottom: none; }
+    .participant-list .p-name { flex: 1; }
+    .participant-list .p-owner { font-size: 0.75rem; color: #6b7280; }
+    .remove-p {
+      border: none; background: transparent; color: #9aa0a6;
+      font-size: 1rem; cursor: pointer;
+    }
+    .remove-p:hover { color: #dc2626; }
+    .inline-error { color: #dc2626; font-size: 0.8rem; margin-top: 4px; }
+    .new-group-form, .new-participant-form {
+      display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .new-group-form input, .new-participant-form input {
+      flex: 1; padding: 10px 12px; border: 1px solid #d0d3d9;
+      border-radius: 8px; font-size: 1rem;
+    }
+    .new-group-form button, .new-participant-form button {
+      padding: 10px 16px; border: none; border-radius: 8px;
+      background: #2563eb; color: #fff; font-size: 1rem; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <header class="app-header">
+      <h1>Expense Tracker</h1>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div class="view-toggle">
+          <button id="view-personal" type="button" class="active">Personal</button>
+          <button id="view-groups" type="button">Groups</button>
+        </div>
+        <div class="month-nav" id="month-nav-controls">
+          <button id="prev-month" type="button" aria-label="Previous month">◀</button>
+          <span id="month-label"></span>
+          <button id="next-month" type="button" aria-label="Next month">▶</button>
+          <button id="all-time-toggle" type="button">All time</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Personal view -->
+    <div id="personal-view" class="personal-view visible">
+      <div id="edit-mode-bar" class="edit-mode-bar">
+        <span>Editing expense —</span>
+        <button type="button" id="cancel-edit">Cancel</button>
+      </div>
+      <form id="add-form" class="add-form">
+        <input id="amount-input" type="number" step="0.01" min="0" placeholder="Amount" />
+        <span id="amount-error" class="amount-error"></span>
+        <select id="category-input"></select>
+        <input id="date-input" type="date" />
+        <input id="note-input" type="text" placeholder="Note (optional)" autocomplete="off" />
+        <button type="submit" id="submit-btn">Add</button>
+      </form>
+      <div class="controls">
+        <select id="filter-category"></select>
+        <select id="sort-order">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="amount-desc">Amount: high → low</option>
+          <option value="amount-asc">Amount: low → high</option>
+        </select>
+      </div>
+      <ul id="expense-list" class="expense-list"></ul>
+      <section class="summary">
+        <div class="total" id="summary-total"></div>
+        <div id="category-bars" class="category-bars"></div>
+      </section>
+      <section class="trend">
+        <h2>Monthly trend</h2>
+        <div id="monthly-trend" class="monthly-trend"></div>
+      </section>
+    </div>
+
+    <!-- Groups view -->
+    <div id="groups-view" class="groups-view">
+      <div id="groups-content"></div>
+    </div>
+  </div>
+
+  <script>
+    // === PURE LOGIC START ===
+    // DOM-free. The Node test harness extracts everything between these two
+    // markers and evaluates it. Do NOT reference document, window, or
+    // localStorage inside this block.
+    const CATEGORIES = [
+      { name: 'Food',          color: '#ef4444' },
+      { name: 'Transport',     color: '#3b82f6' },
+      { name: 'Entertainment', color: '#a855f7' },
+      { name: 'Health',        color: '#22c55e' },
+      { name: 'Shopping',      color: '#f59e0b' },
+      { name: 'Bills',         color: '#14b8a6' },
+      { name: 'Other',         color: '#94a3b8' },
+    ];
+
+    const STORAGE_KEY = 'expense-tracker-state';
+
+    // "YYYY-MM-DD" -> "YYYY-MM"
+    function monthKey(dateStr) {
+      return dateStr.slice(0, 7);
+    }
+
+    const MONTH_NAMES = ['January','February','March','April','May','June',
+                         'July','August','September','October','November','December'];
+    const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun',
+                               'Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    // "YYYY-MM" -> "June 2026"
+    function monthLabel(mKey) {
+      const [y, m] = mKey.split('-').map(Number);
+      return MONTH_NAMES[m - 1] + ' ' + y;
+    }
+
+    // "YYYY-MM" -> "Jun '26"
+    function monthLabelShort(mKey) {
+      const [y, m] = mKey.split('-').map(Number);
+      return MONTH_NAMES_SHORT[m - 1] + " '" + String(y).slice(2);
+    }
+
+    // Move a month key by `delta` months, wrapping the year.
+    function shiftMonth(mKey, delta) {
+      let [y, m] = mKey.split('-').map(Number);
+      m += delta;
+      while (m < 1) { m += 12; y--; }
+      while (m > 12) { m -= 12; y++; }
+      return y + '-' + String(m).padStart(2, '0');
+    }
+
+    // Scope to a month ("YYYY-MM"), or return a copy of all when scope is null.
+    function scopeExpenses(expenses, monthScope) {
+      if (!monthScope) return expenses.slice();
+      return expenses.filter((e) => monthKey(e.date) === monthScope);
+    }
+
+    function scopedTotal(expenses) {
+      return expenses.reduce((sum, e) => sum + e.amount, 0);
+    }
+
+    // One entry per category that has spending, descending by total.
+    // Iterates CATEGORIES so each entry carries its canonical color.
+    function categoryBreakdown(expenses) {
+      const totals = new Map();
+      for (const e of expenses) {
+        totals.set(e.category, (totals.get(e.category) || 0) + e.amount);
+      }
+      return CATEGORIES
+        .filter((c) => totals.has(c.name))
+        .map((c) => ({ name: c.name, color: c.color, total: totals.get(c.name) }))
+        .sort((a, b) => b.total - a.total);
+    }
+    // One entry per month present in the data, chronological. Independent of
+    // any month/category selection — this is the cross-month comparison.
+    function monthlyTotals(expenses) {
+      const totals = new Map();
+      for (const e of expenses) {
+        const k = monthKey(e.date);
+        totals.set(k, (totals.get(k) || 0) + e.amount);
+      }
+      return [...totals.entries()]
+        .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+        .map(([month, total]) => ({ month, total }));
+    }
+    // Filter the list by category ('all' = no filter), then sort. Returns a
+    // new array; never mutates the input. Date ties break by id so the order
+    // is stable.
+    function applyFilterSort(expenses, category, sort) {
+      let list = expenses.slice();
+      if (category && category !== 'all') {
+        list = list.filter((e) => e.category === category);
+      }
+      switch (sort) {
+        case 'date-desc':
+          list.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+          break;
+        case 'date-asc':
+          list.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+          break;
+        case 'amount-desc':
+          list.sort((a, b) => b.amount - a.amount);
+          break;
+        case 'amount-asc':
+          list.sort((a, b) => a.amount - b.amount);
+          break;
+      }
+      return list;
+    }
+
+    // Returns a positive finite number, or null when the input is invalid.
+    function parseAmount(raw) {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n <= 0) return null;
+      return n;
+    }
+
+    // Returns a new array with the expense matching `id` merged with `fields`.
+    function updateExpense(expenses, id, fields) {
+      return expenses.map((e) => (e.id === id ? { ...e, ...fields } : e));
+    }
+
+    // Splits `amount` equally among `sharerIds`; remainder cents go to the payer if they
+    // are a sharer, otherwise to the first sharer, so the total always sums exactly to `amount`.
+    // Returns [{participantId, amount}] — amounts are rounded to 2 decimal places.
+    function splitExpense(amount, sharerIds, payerId) {
+      const n = sharerIds.length;
+      const base = Math.floor((amount * 100) / n);  // cents, rounded down
+      const remainder = Math.round(amount * 100) - base * n;
+      const remainderRecipient = sharerIds.includes(payerId) ? payerId : sharerIds[0];
+      return sharerIds.map((id, i) => {
+        const cents = id === remainderRecipient ? base + remainder : base;
+        return { participantId: id, amount: Math.round(cents) / 100 };
+      });
+    }
+
+    // Returns true if a participant is referenced as payer or sharer in any shared expense.
+    function isParticipantReferenced(group, participantId) {
+      return group.sharedExpenses.some(
+        (se) => se.payerId === participantId || se.sharerIds.includes(participantId)
+      );
+    }
+
+    // Returns expense-like objects representing the owner's equal share in each
+    // shared expense (across all groups) where the owner is a sharer, scoped to a month.
+    function ownerSharesForMonth(groups, ownerId, monthScope) {
+      const result = [];
+      for (const group of groups) {
+        for (const se of group.sharedExpenses) {
+          if (monthKey(se.date) !== monthScope) continue;
+          if (!se.sharerIds.includes(ownerId)) continue;
+          const shares = splitExpense(se.amount, se.sharerIds, se.payerId);
+          const ownerShare = shares.find((s) => s.participantId === ownerId);
+          if (ownerShare) {
+            result.push({ amount: ownerShare.amount, category: se.category, date: se.date, note: se.note });
+          }
+        }
+      }
+      return result;
+    }
+
+    // Computes pairwise netted balances for a group from its sharedExpenses.
+    // Returns [{fromId, toId, amount}] — only pairs with amount > 0 after netting.
+    function computeBalances(group) {
+      const owed = new Map(); // key: `${fromId}:${toId}` → amount in cents
+      for (const se of group.sharedExpenses) {
+        const shares = splitExpense(se.amount, se.sharerIds, se.payerId);
+        for (const s of shares) {
+          if (s.participantId === se.payerId) continue;
+          const key = s.participantId + ':' + se.payerId;
+          owed.set(key, (owed.get(key) || 0) + Math.round(s.amount * 100));
+        }
+      }
+      // Net opposite-direction pairs
+      const result = [];
+      const seen = new Set();
+      for (const [key, cents] of owed) {
+        if (seen.has(key)) continue;
+        const [fromId, toId] = key.split(':').map(Number);
+        const reverseKey = toId + ':' + fromId;
+        const reverseCents = owed.get(reverseKey) || 0;
+        seen.add(key); seen.add(reverseKey);
+        const net = cents - reverseCents;
+        if (net > 0) result.push({ fromId, toId, amount: Math.round(net) / 100 });
+        else if (net < 0) result.push({ fromId: toId, toId: fromId, amount: Math.round(-net) / 100 });
+      }
+      return result;
+    }
+
+    // Reduces outstanding balances by subtracting settled amounts.
+    // Balances below or at zero after settlement are removed.
+    function applySettlements(balances, settlements) {
+      return balances.map((b) => {
+        const settled = settlements
+          .filter((s) => s.fromId === b.fromId && s.toId === b.toId)
+          .reduce((sum, s) => sum + s.amount, 0);
+        return { ...b, amount: Math.round((b.amount - settled) * 100) / 100 };
+      }).filter((b) => b.amount > 0.001);
+    }
+
+    // Upgrades legacy {expenses, nextId} to v2 envelope.
+    // Already-v2 input is returned unchanged (idempotent).
+    function migrateState(state) {
+      if (state && state.schemaVersion === 2) return state;
+      const expenses = Array.isArray(state && state.expenses) ? state.expenses : [];
+      const nextId = Number.isInteger(state && state.nextId) ? state.nextId : 1;
+      return { schemaVersion: 2, nextId, expenses, groups: [] };
+    }
+
+    function serializeState(state) {
+      return JSON.stringify(state);
+    }
+
+    // Always returns a usable v2 state, even for missing or malformed input.
+    function deserializeState(raw) {
+      const DEFAULT = { schemaVersion: 2, expenses: [], nextId: 1, groups: [] };
+      if (!raw) return DEFAULT;
+      try {
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== 'object' || Array.isArray(data)) return DEFAULT;
+        return migrateState(data);
+      } catch {
+        return DEFAULT;
+      }
+    }
+    // === PURE LOGIC END ===
+
+    // --- DOM references ---
+    const monthLabelEl    = document.getElementById('month-label');
+    const allTimeToggle   = document.getElementById('all-time-toggle');
+    const monthNavControls= document.getElementById('month-nav-controls');
+    const personalViewEl  = document.getElementById('personal-view');
+    const groupsViewEl    = document.getElementById('groups-view');
+    const groupsContentEl = document.getElementById('groups-content');
+    const addForm         = document.getElementById('add-form');
+    const amountInput     = document.getElementById('amount-input');
+    const amountError     = document.getElementById('amount-error');
+    const categoryInput   = document.getElementById('category-input');
+    const dateInput       = document.getElementById('date-input');
+    const noteInput       = document.getElementById('note-input');
+    const submitBtn       = document.getElementById('submit-btn');
+    const editModeBar     = document.getElementById('edit-mode-bar');
+    const cancelEditBtn   = document.getElementById('cancel-edit');
+    const filterCategoryEl= document.getElementById('filter-category');
+    const sortOrderEl     = document.getElementById('sort-order');
+    const listEl          = document.getElementById('expense-list');
+    const summaryTotalEl  = document.getElementById('summary-total');
+    const categoryBarsEl  = document.getElementById('category-bars');
+    const monthlyTrendEl  = document.getElementById('monthly-trend');
+
+    // --- mutable state ---
+    let expenses = [];
+    let groups = [];
+    let nextId = 1;
+    let editingId = null;
+    let currentView = 'personal'; // 'personal' | 'groups'
+    let selectedGroupId = null;
+    let monthScope = todayISO().slice(0, 7); // current month; null = all time
+    let filterCategory = 'all';
+    let sortOrder = 'date-desc';
+
+    // Local (not UTC) ISO date, so "today" matches the user's calendar day.
+    function todayISO() {
+      const d = new Date();
+      const tz = d.getTimezoneOffset() * 60000;
+      return new Date(d - tz).toISOString().slice(0, 10);
+    }
+
+    function formatAmount(n) {
+      return '$' + n.toFixed(2);
+    }
+
+    function colorFor(name) {
+      const c = CATEGORIES.find((c) => c.name === name);
+      return c ? c.color : '#94a3b8';
+    }
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, serializeState({ schemaVersion: 2, nextId, expenses, groups }));
+    }
+
+    function load() {
+      const state = deserializeState(localStorage.getItem(STORAGE_KEY));
+      expenses = state.expenses;
+      nextId = state.nextId;
+      groups = state.groups || [];
+    }
+
+    function populateSelects() {
+      categoryInput.innerHTML = '';
+      for (const c of CATEGORIES) {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name;
+        categoryInput.appendChild(opt);
+      }
+      filterCategoryEl.innerHTML = '';
+      const all = document.createElement('option');
+      all.value = 'all';
+      all.textContent = 'All categories';
+      filterCategoryEl.appendChild(all);
+      for (const c of CATEGORIES) {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name;
+        filterCategoryEl.appendChild(opt);
+      }
+    }
+
+    function getOwnerId() {
+      for (const g of groups) {
+        const owner = g.participants.find((p) => p.isOwner);
+        if (owner) return owner.id;
+      }
+      return null;
+    }
+
+    function render() {
+      if (currentView === 'groups') {
+        personalViewEl.classList.remove('visible');
+        groupsViewEl.classList.add('visible');
+        monthNavControls.style.display = 'none';
+        renderGroups();
+        return;
+      }
+      personalViewEl.classList.add('visible');
+      groupsViewEl.classList.remove('visible');
+      monthNavControls.style.display = '';
+
+      const scoped = scopeExpenses(expenses, monthScope);
+      monthLabelEl.textContent = monthScope ? monthLabel(monthScope) : 'All time';
+      allTimeToggle.classList.toggle('active', monthScope === null);
+      renderList(applyFilterSort(scoped, filterCategory, sortOrder));
+
+      // Derive owner's share per group (each group's "Me" has a different ID).
+      const ownerShares = monthScope
+        ? groups.flatMap((g) => {
+            const me = g.participants.find((p) => p.isOwner);
+            return me ? ownerSharesForMonth([g], me.id, monthScope) : [];
+          })
+        : [];
+      renderSummary([...scoped, ...ownerShares]);
+      renderTrend(monthlyTotals(expenses));
+    }
+
+    function renderGroups() {
+      if (selectedGroupId !== null) {
+        const group = groups.find((g) => g.id === selectedGroupId);
+        if (group) { renderGroupDetail(group); return; }
+        selectedGroupId = null;
+      }
+      renderGroupList();
+    }
+
+    function renderGroupList() {
+      groupsContentEl.innerHTML = '';
+
+      const h = document.createElement('h2');
+      h.textContent = 'Groups';
+      groupsContentEl.appendChild(h);
+
+      if (groups.length === 0) {
+        const p = document.createElement('div');
+        p.className = 'empty';
+        p.textContent = 'No groups yet.';
+        groupsContentEl.appendChild(p);
+      } else {
+        const ul = document.createElement('ul');
+        ul.className = 'group-list';
+        for (const g of groups) {
+          const li = document.createElement('li');
+          li.addEventListener('click', () => { selectedGroupId = g.id; render(); });
+
+          const name = document.createElement('span');
+          name.className = 'group-name';
+          name.textContent = g.name;
+
+          const meta = document.createElement('span');
+          meta.className = 'group-meta';
+          meta.textContent = g.participants.length + ' participants';
+
+          li.append(name, meta);
+          ul.appendChild(li);
+        }
+        groupsContentEl.appendChild(ul);
+      }
+
+      // New group form
+      const form = document.createElement('div');
+      form.className = 'new-group-form';
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.placeholder = 'Group name';
+      const createBtn = document.createElement('button');
+      createBtn.type = 'button';
+      createBtn.textContent = 'Create group';
+      const errEl = document.createElement('div');
+      errEl.className = 'inline-error';
+      createBtn.addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name) { errEl.textContent = 'Enter a group name.'; return; }
+        errEl.textContent = '';
+        createGroup(name);
+        nameInput.value = '';
+      });
+      nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') createBtn.click(); });
+      form.append(nameInput, createBtn);
+      groupsContentEl.append(form, errEl);
+    }
+
+    function renderGroupDetail(group) {
+      groupsContentEl.innerHTML = '';
+
+      const header = document.createElement('div');
+      header.className = 'group-detail-header';
+      const backBtn = document.createElement('button');
+      backBtn.className = 'back-btn';
+      backBtn.textContent = '← Back';
+      backBtn.addEventListener('click', () => { selectedGroupId = null; render(); });
+      const title = document.createElement('h2');
+      title.style.margin = '0';
+      title.textContent = group.name;
+      header.append(backBtn, title);
+      groupsContentEl.appendChild(header);
+
+      // Participants section
+      const ph2 = document.createElement('h2');
+      ph2.textContent = 'Participants';
+      groupsContentEl.appendChild(ph2);
+
+      const pErrEl = document.createElement('div');
+      pErrEl.className = 'inline-error';
+
+      const ul = document.createElement('ul');
+      ul.className = 'participant-list';
+      for (const p of group.participants) {
+        const li = document.createElement('li');
+        const pName = document.createElement('span');
+        pName.className = 'p-name';
+        pName.textContent = p.name;
+        li.appendChild(pName);
+        if (p.isOwner) {
+          const ownerBadge = document.createElement('span');
+          ownerBadge.className = 'p-owner';
+          ownerBadge.textContent = '(you)';
+          li.appendChild(ownerBadge);
+        } else {
+          const rmBtn = document.createElement('button');
+          rmBtn.className = 'remove-p';
+          rmBtn.textContent = '✕';
+          rmBtn.setAttribute('aria-label', 'Remove participant');
+          rmBtn.addEventListener('click', () => removeParticipant(group.id, p.id, pErrEl));
+          li.appendChild(rmBtn);
+        }
+        ul.appendChild(li);
+      }
+      groupsContentEl.appendChild(ul);
+      groupsContentEl.appendChild(pErrEl);
+
+      // Add participant form
+      const pForm = document.createElement('div');
+      pForm.className = 'new-participant-form';
+      const pInput = document.createElement('input');
+      pInput.type = 'text';
+      pInput.placeholder = 'Participant name';
+      const addPBtn = document.createElement('button');
+      addPBtn.type = 'button';
+      addPBtn.textContent = 'Add participant';
+      const pFormErr = document.createElement('div');
+      pFormErr.className = 'inline-error';
+      addPBtn.addEventListener('click', () => {
+        const name = pInput.value.trim();
+        if (!name) { pFormErr.textContent = 'Enter a name.'; return; }
+        pFormErr.textContent = '';
+        addParticipant(group.id, name);
+        pInput.value = '';
+      });
+      pInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addPBtn.click(); });
+      pForm.append(pInput, addPBtn);
+      groupsContentEl.append(pForm, pFormErr);
+
+      // Shared expenses section
+      const sh2 = document.createElement('h2');
+      sh2.style.marginTop = '20px';
+      sh2.textContent = 'Shared Expenses';
+      groupsContentEl.appendChild(sh2);
+
+      if (group.sharedExpenses.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No shared expenses yet.';
+        groupsContentEl.appendChild(empty);
+      } else {
+        const sul = document.createElement('ul');
+        sul.className = 'expense-list';
+        for (const se of group.sharedExpenses) {
+          const sli = document.createElement('li');
+          const payer = group.participants.find((p) => p.id === se.payerId);
+          const date = document.createElement('span');
+          date.className = 'date';
+          date.textContent = se.date;
+          const note = document.createElement('span');
+          note.className = 'note';
+          note.textContent = (payer ? payer.name : '?') + (se.note ? ' — ' + se.note : '');
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.style.background = colorFor(se.category);
+          chip.textContent = se.category;
+          const amt = document.createElement('span');
+          amt.className = 'amount';
+          amt.textContent = formatAmount(se.amount);
+          const del = document.createElement('button');
+          del.className = 'delete';
+          del.type = 'button';
+          del.textContent = '✕';
+          del.addEventListener('click', () => deleteSharedExpense(group.id, se.id));
+          sli.append(date, note, chip, amt, del);
+          sul.appendChild(sli);
+        }
+        groupsContentEl.appendChild(sul);
+      }
+
+      // Add shared expense form
+      const seFormErr = document.createElement('div');
+      seFormErr.className = 'inline-error';
+      const seForm = document.createElement('div');
+      seForm.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:12px;';
+
+      const seRow1 = document.createElement('div');
+      seRow1.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+      const seAmount = document.createElement('input');
+      seAmount.type = 'number'; seAmount.step = '0.01'; seAmount.min = '0';
+      seAmount.placeholder = 'Amount'; seAmount.style.width = '110px';
+      const seCat = document.createElement('select');
+      for (const c of CATEGORIES) {
+        const o = document.createElement('option');
+        o.value = c.name; o.textContent = c.name; seCat.appendChild(o);
+      }
+      const seDate = document.createElement('input');
+      seDate.type = 'date'; seDate.value = todayISO();
+      const seNote = document.createElement('input');
+      seNote.type = 'text'; seNote.placeholder = 'Note (optional)'; seNote.style.flex = '1';
+      seRow1.append(seAmount, seCat, seDate, seNote);
+
+      const seRow2 = document.createElement('div');
+      seRow2.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
+      const payerLabel = document.createElement('label');
+      payerLabel.textContent = 'Paid by: ';
+      payerLabel.style.marginRight = '4px';
+      const payerSel = document.createElement('select');
+      for (const p of group.participants) {
+        const o = document.createElement('option');
+        o.value = p.id; o.textContent = p.name; payerSel.appendChild(o);
+      }
+      seRow2.append(payerLabel, payerSel);
+
+      const seRow3 = document.createElement('div');
+      seRow3.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
+      const sharesLabel = document.createElement('span');
+      sharesLabel.textContent = 'Split with:';
+      seRow3.appendChild(sharesLabel);
+      const sharerCheckboxes = group.participants.map((p) => {
+        const lbl = document.createElement('label');
+        lbl.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = p.id; cb.checked = true;
+        lbl.append(cb, document.createTextNode(p.name));
+        seRow3.appendChild(lbl);
+        return cb;
+      });
+
+      const seAddBtn = document.createElement('button');
+      seAddBtn.type = 'button'; seAddBtn.textContent = 'Add shared expense';
+      seAddBtn.style.cssText = 'padding:10px 16px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:1rem;cursor:pointer;align-self:flex-start;';
+      seAddBtn.addEventListener('click', () => {
+        const amount = parseAmount(seAmount.value);
+        if (amount === null) { seFormErr.textContent = 'Enter a valid amount.'; return; }
+        const sharerIds = sharerCheckboxes.filter((cb) => cb.checked).map((cb) => Number(cb.value));
+        if (sharerIds.length === 0) { seFormErr.textContent = 'Select at least one sharer.'; return; }
+        seFormErr.textContent = '';
+        addSharedExpense(group.id, {
+          amount, category: seCat.value,
+          date: seDate.value || todayISO(),
+          note: seNote.value.trim(),
+          payerId: Number(payerSel.value),
+          sharerIds,
+        });
+      });
+
+      seForm.append(seRow1, seRow2, seRow3, seAddBtn);
+      groupsContentEl.append(seForm, seFormErr);
+
+      // Balances section (Stories 2.4 + 2.5)
+      renderBalances(group);
+    }
+
+    function renderBalances(group) {
+      const bh2 = document.createElement('h2');
+      bh2.style.marginTop = '20px';
+      bh2.textContent = 'Balances';
+      groupsContentEl.appendChild(bh2);
+
+      const rawBalances = computeBalances(group);
+      const balances = applySettlements(rawBalances, group.settlements);
+
+      if (balances.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'All settled up!';
+        groupsContentEl.appendChild(empty);
+        return;
+      }
+
+      const bul = document.createElement('ul');
+      bul.className = 'participant-list';
+      for (const b of balances) {
+        const fromP = group.participants.find((p) => p.id === b.fromId);
+        const toP   = group.participants.find((p) => p.id === b.toId);
+        const li = document.createElement('li');
+        const txt = document.createElement('span');
+        txt.className = 'p-name';
+        txt.textContent = (fromP ? fromP.name : '?') + ' owes ' + (toP ? toP.name : '?') + ': ' + formatAmount(b.amount);
+        const settleBtn = document.createElement('button');
+        settleBtn.style.cssText = 'padding:4px 10px;border:1px solid #d0d3d9;border-radius:6px;background:#fff;cursor:pointer;font-size:0.8rem;';
+        settleBtn.textContent = 'Settle';
+        settleBtn.addEventListener('click', () => settleBalance(group.id, b.fromId, b.toId, b.amount));
+        li.append(txt, settleBtn);
+        bul.appendChild(li);
+      }
+      groupsContentEl.appendChild(bul);
+    }
+
+    function addSharedExpense(groupId, fields) {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+      group.sharedExpenses.push({ id: nextId++, ...fields });
+      save();
+      render();
+    }
+
+    function deleteSharedExpense(groupId, expenseId) {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+      group.sharedExpenses = group.sharedExpenses.filter((se) => se.id !== expenseId);
+      // Drop settlements for pairs where the total settled now exceeds the revised balance,
+      // so stale settlements can't falsely show "all settled up".
+      const revised = computeBalances(group);
+      const pairKeys = [...new Set(group.settlements.map((s) => `${s.fromId}:${s.toId}`))];
+      for (const key of pairKeys) {
+        const [fromId, toId] = key.split(':').map(Number);
+        const balance = revised.find((b) => b.fromId === fromId && b.toId === toId);
+        const cap = balance ? balance.amount : 0;
+        const totalSettled = group.settlements
+          .filter((s) => s.fromId === fromId && s.toId === toId)
+          .reduce((sum, s) => sum + s.amount, 0);
+        if (totalSettled > cap + 0.001) {
+          group.settlements = group.settlements.filter(
+            (s) => !(s.fromId === fromId && s.toId === toId)
+          );
+        }
+      }
+      save();
+      render();
+    }
+
+    function settleBalance(groupId, fromId, toId, amount) {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+      group.settlements.push({ id: nextId++, fromId, toId, amount, date: todayISO() });
+      save();
+      render();
+    }
+
+    function createGroup(name) {
+      const ownerId = nextId++;
+      groups.push({
+        id: nextId++,
+        name,
+        participants: [{ id: ownerId, name: 'Me', isOwner: true }],
+        sharedExpenses: [],
+        settlements: [],
+      });
+      save();
+      render();
+    }
+
+    function addParticipant(groupId, name) {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+      group.participants.push({ id: nextId++, name, isOwner: false });
+      save();
+      render();
+    }
+
+    function removeParticipant(groupId, participantId, errEl) {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+      if (isParticipantReferenced(group, participantId)) {
+        errEl.textContent = 'Cannot remove: participant is referenced by a shared expense.';
+        return;
+      }
+      group.participants = group.participants.filter((p) => p.id !== participantId);
+      save();
+      render();
+    }
+
+    function renderList(items) {
+      listEl.innerHTML = '';
+      if (items.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = monthScope ? 'No expenses for this month.' : 'No expenses yet.';
+        listEl.appendChild(li);
+        return;
+      }
+      for (const e of items) {
+        const li = document.createElement('li');
+
+        const date = document.createElement('span');
+        date.className = 'date';
+        date.textContent = e.date;
+
+        const note = document.createElement('span');
+        note.className = 'note';
+        note.textContent = e.note || '';
+
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.style.background = colorFor(e.category);
+        chip.textContent = e.category;
+
+        const amount = document.createElement('span');
+        amount.className = 'amount';
+        amount.textContent = formatAmount(e.amount);
+
+        const edit = document.createElement('button');
+        edit.className = 'edit';
+        edit.type = 'button';
+        edit.textContent = '✎';
+        edit.setAttribute('aria-label', 'Edit expense');
+        edit.addEventListener('click', () => editExpenseUI(e.id));
+
+        const del = document.createElement('button');
+        del.className = 'delete';
+        del.type = 'button';
+        del.textContent = '✕';
+        del.setAttribute('aria-label', 'Delete expense');
+        del.addEventListener('click', () => deleteExpense(e.id));
+
+        li.append(date, note, chip, amount, edit, del);
+        listEl.appendChild(li);
+      }
+    }
+
+    function renderSummary(scoped) {
+      summaryTotalEl.textContent = formatAmount(scopedTotal(scoped));
+      const bars = categoryBreakdown(scoped);
+      categoryBarsEl.innerHTML = '';
+      if (bars.length === 0) {
+        const p = document.createElement('div');
+        p.className = 'empty';
+        p.textContent = 'No spending to chart.';
+        categoryBarsEl.appendChild(p);
+        return;
+      }
+      const max = bars[0].total; // bars is sorted descending, so [0] is the largest
+      for (const b of bars) {
+        const row = document.createElement('div');
+        row.className = 'cat-bar';
+
+        const name = document.createElement('span');
+        name.className = 'cat-name';
+        name.textContent = b.name;
+
+        const track = document.createElement('div');
+        track.className = 'bar-track';
+        const fill = document.createElement('div');
+        fill.className = 'bar-fill';
+        fill.style.width = (max > 0 ? (b.total / max) * 100 : 0) + '%';
+        fill.style.background = b.color;
+        track.appendChild(fill);
+
+        const amt = document.createElement('span');
+        amt.className = 'cat-amount';
+        amt.textContent = formatAmount(b.total);
+
+        row.append(name, track, amt);
+        categoryBarsEl.appendChild(row);
+      }
+    }
+
+    function renderTrend(months) {
+      monthlyTrendEl.innerHTML = '';
+      if (months.length === 0) {
+        const p = document.createElement('div');
+        p.className = 'empty';
+        p.textContent = 'No data yet.';
+        monthlyTrendEl.appendChild(p);
+        return;
+      }
+      const max = Math.max(...months.map((m) => m.total));
+      for (const m of months) {
+        const col = document.createElement('div');
+        col.className = 'trend-col';
+
+        const amt = document.createElement('div');
+        amt.className = 'trend-amount';
+        amt.textContent = formatAmount(m.total);
+
+        const bar = document.createElement('div');
+        bar.className = 'trend-bar';
+        bar.style.height = (max > 0 ? (m.total / max) * 100 : 0) + '%';
+
+        const label = document.createElement('div');
+        label.className = 'trend-month';
+        label.textContent = monthLabelShort(m.month);
+
+        col.append(amt, bar, label);
+        monthlyTrendEl.appendChild(col);
+      }
+    }
+
+    function resetToAddMode() {
+      editingId = null;
+      amountInput.value = '';
+      noteInput.value = '';
+      dateInput.value = todayISO();
+      amountError.textContent = '';
+      submitBtn.textContent = 'Add';
+      editModeBar.classList.remove('visible');
+      amountInput.focus();
+    }
+
+    function addExpense(event) {
+      event.preventDefault();
+      const amount = parseAmount(amountInput.value);
+      if (amount === null) {
+        amountError.textContent = 'Enter a valid amount greater than 0.';
+        amountInput.focus();
+        return;
+      }
+      amountError.textContent = '';
+
+      if (editingId !== null) {
+        expenses = updateExpense(expenses, editingId, {
+          amount,
+          category: categoryInput.value,
+          date: dateInput.value || todayISO(),
+          note: noteInput.value.trim(),
+        });
+        save();
+        resetToAddMode();
+        render();
+        return;
+      }
+
+      expenses.push({
+        id: nextId++,
+        amount,
+        category: categoryInput.value,
+        date: dateInput.value || todayISO(),
+        note: noteInput.value.trim(),
+      });
+      save();
+      amountInput.value = '';
+      noteInput.value = '';
+      amountInput.focus();
+      render();
+    }
+
+    function editExpenseUI(id) {
+      const e = expenses.find((x) => x.id === id);
+      if (!e) return;
+      editingId = id;
+      amountInput.value = e.amount;
+      categoryInput.value = e.category;
+      dateInput.value = e.date;
+      noteInput.value = e.note;
+      amountError.textContent = '';
+      submitBtn.textContent = 'Update';
+      editModeBar.classList.add('visible');
+      amountInput.focus();
+    }
+
+    function deleteExpense(id) {
+      if (editingId === id) resetToAddMode();
+      expenses = expenses.filter((e) => e.id !== id);
+      save();
+      render();
+    }
+
+    addForm.addEventListener('submit', addExpense);
+    cancelEditBtn.addEventListener('click', resetToAddMode);
+    amountInput.addEventListener('input', () => { amountError.textContent = ''; });
+
+    document.getElementById('view-personal').addEventListener('click', () => {
+      currentView = 'personal';
+      document.getElementById('view-personal').classList.add('active');
+      document.getElementById('view-groups').classList.remove('active');
+      render();
+    });
+    document.getElementById('view-groups').addEventListener('click', () => {
+      currentView = 'groups';
+      document.getElementById('view-groups').classList.add('active');
+      document.getElementById('view-personal').classList.remove('active');
+      render();
+    });
+
+    document.getElementById('prev-month').addEventListener('click', () => {
+      monthScope = shiftMonth(monthScope || todayISO().slice(0, 7), -1);
+      render();
+    });
+    document.getElementById('next-month').addEventListener('click', () => {
+      monthScope = shiftMonth(monthScope || todayISO().slice(0, 7), 1);
+      render();
+    });
+    allTimeToggle.addEventListener('click', () => {
+      monthScope = monthScope === null ? todayISO().slice(0, 7) : null;
+      render();
+    });
+    filterCategoryEl.addEventListener('change', () => {
+      filterCategory = filterCategoryEl.value;
+      render();
+    });
+    sortOrderEl.addEventListener('change', () => {
+      sortOrder = sortOrderEl.value;
+      render();
+    });
+
+    // --- init ---
+    load();
+    populateSelects();
+    dateInput.value = todayISO();
+    render();
+  </script>
+</body>
+</html>
